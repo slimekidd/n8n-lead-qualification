@@ -1,0 +1,326 @@
+{
+  "name": "Lead Processing — Stuck Leads Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    lead_id,\n    client_name,\n    company,\n    status,\n    execution_id,\n    processing_started_at,\n    stuck_alert_sent_at\nFROM leads\nWHERE status = 'processing'\n  AND processing_started_at < NOW() - INTERVAL '10 minutes'\n  AND execution_id IS NOT NULL\nORDER BY processing_started_at ASC\nLIMIT 20;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -400,
+        112
+      ],
+      "id": "7e89677d-dfdd-46b8-8e54-0edf40f0ad68",
+      "name": "Find Stuck Leads",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{\n`⚠️ STUCK LEAD DETECTED\n\nLead ID: ${$json.lead_id}\nClient: ${$json.client_name}\nCompany: ${$json.company}\n\nStatus: ${$json.status}\nExecution ID: ${$json.execution_id ?? 'N/A'}\nProcessing started: ${$json.processing_started_at}\n\nThe lead has been processing for more than 10 minutes.\nPlease investigate.`\n}}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        208
+      ],
+      "id": "e1856822-60dd-4c10-b9dc-8ac2c023c75b",
+      "name": "Send Stuck Lead Alert",
+      "webhookId": "316acb03-3b30-53ec-9e3f-681e31cefced",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET stuck_alert_sent_at = NOW()\nWHERE lead_id = $1\n  AND status = 'processing'\n  AND stuck_alert_sent_at IS NULL\nRETURNING\n    lead_id,\n    status,\n    stuck_alert_sent_at;",
+        "options": {
+          "queryReplacement": "={{ $('Find Stuck Leads').item.json.lead_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        208,
+        208
+      ],
+      "id": "b1c849d0-871c-4328-8b58-81a858fcd489",
+      "name": "Mark Stuck Alert Sent",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -624,
+        112
+      ],
+      "id": "3ed97ac0-4ee0-427e-aa28-85b19529e2f6",
+      "name": "Stuck Leads Scheduler"
+    },
+    {
+      "parameters": {
+        "url": "=\n{{ 'http://YOUR_N8N_HOST:5678/api/v1/executions/' + $json.execution_id }}\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -208,
+        16
+      ],
+      "id": "2e4847fd-560a-4081-9501-378c34631fc4",
+      "name": "Lead Recovery API",
+      "executeOnce": false,
+      "credentials": {
+        "n8nApi": {
+          "id": "REPLACE_ME",
+          "name": "n8n API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const execution = $json;\nconst lead = $('Find Stuck Leads').item.json;\n\nconst MAIN_WORKFLOW_ID = 'YOUR_MAIN_WORKFLOW_ID';\n\nlet action = 'skip';\n\nconst correctExecution =\n  String(execution.id) === String(lead.execution_id);\n\nconst correctWorkflow =\n  execution.workflowId === MAIN_WORKFLOW_ID;\n\nif (correctExecution && correctWorkflow) {\n  if (\n    execution.status === 'success' &&\n    execution.finished === true\n  ) {\n    action = 'check_completion';\n  } else if (\n    ['error', 'crashed', 'canceled'].includes(execution.status) &&\n    execution.stoppedAt\n  ) {\n    action = 'recover';\n  }\n}\n\nreturn {\n  json: {\n    lead_id: lead.lead_id,\n    execution_id: String(lead.execution_id),\n    execution_status: execution.status,\n    workflow_id: execution.workflowId,\n    action\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "19212f94-ec92-46eb-87d2-6e9656d5c579",
+      "name": "Recovery Decision"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n    status = CASE\n        WHEN sheets_saved IS TRUE\n         AND telegram_sent IS TRUE\n        THEN 'completed'\n        ELSE 'failed'\n    END,\n\n    next_retry_at = CASE\n        WHEN sheets_saved IS TRUE\n         AND telegram_sent IS TRUE\n        THEN NULL\n\n        WHEN COALESCE(retry_count, 0) < 3\n        THEN NOW() + INTERVAL '1 minute'\n\n        ELSE NULL\n    END,\n\n    \n    error_message = CASE\n        WHEN sheets_saved IS TRUE\n         AND telegram_sent IS TRUE\n        THEN NULL\n    \n        WHEN COALESCE(retry_count, 0) < 3\n        THEN 'Execution failed. Recovery scheduled.'\n    \n        ELSE 'Execution failed. Retry limit reached.'\n    END,\n\n\n    processed_at = CASE\n        WHEN sheets_saved IS TRUE\n         AND telegram_sent IS TRUE\n        THEN NOW()\n        ELSE processed_at\n    END\n\nWHERE lead_id = $1\n  AND execution_id = $2\n  AND status = 'processing'\n  AND (\n      (\n          $3 = 'check_completion'\n          AND sheets_saved IS TRUE\n          AND telegram_sent IS TRUE\n      )\n      OR\n      (\n          $3 = 'recover'\n          AND (\n              telegram_sent IS FALSE\n              OR (\n                  sheets_saved IS TRUE\n                  AND telegram_sent IS TRUE\n              )\n          )\n      )\n  )\n\nRETURNING\n    lead_id,\n    status,\n    retry_count,\n    next_retry_at,\n    sheets_saved,\n    telegram_sent;",
+        "options": {
+          "queryReplacement": "=\n{{ [\n  $json.lead_id,\n  $json.execution_id,\n  $json.action\n] }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        208,
+        -160
+      ],
+      "id": "734d8649-2d3c-43d6-af28-e2fface89c1f",
+      "name": "Apply Recovery",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(item =>\n  item.json.stuck_alert_sent_at == null\n);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        208
+      ],
+      "id": "0118a3b9-0082-48f4-ac71-ce389df9f6d1",
+      "name": "Filter Unsent Alerts"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ `🛑 STUCK LEAD — RECOVERY API ERROR\n\n   Lead ID: ${$('Find Stuck Leads').item.json.lead_id}\n   Execution ID: ${$('Find Stuck Leads').item.json.execution_id}\n\n   Could not fetch execution via n8n API.\n   Error: ${$json.error?.message ?? $json.error ?? 'Unknown error'}\n\n   Lead stays in processing — manual check required.` }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        16
+      ],
+      "id": "fd36f489-b072-4a53-b128-77b206bc312f",
+      "name": "Send Recovery API Error Alert",
+      "webhookId": "109e90d5-6db1-4e57-93c0-775517eeebcc",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f38eb42b-30ee-4ead-ada9-606044e01afc",
+              "leftValue": "={{ $('Find Stuck Leads').item.json.stuck_alert_sent_at == null }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        32
+      ],
+      "id": "6bddede3-5ba6-4c2b-8484-cd2d0efd6fd4",
+      "name": "API Error Alert Not Sent?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Find Stuck Leads": {
+      "main": [
+        [
+          {
+            "node": "Lead Recovery API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter Unsent Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Stuck Lead Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark Stuck Alert Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stuck Leads Scheduler": {
+      "main": [
+        [
+          {
+            "node": "Find Stuck Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Recovery API": {
+      "main": [
+        [
+          {
+            "node": "Recovery Decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Error Alert Not Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recovery Decision": {
+      "main": [
+        [
+          {
+            "node": "Apply Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Unsent Alerts": {
+      "main": [
+        [
+          {
+            "node": "Send Stuck Lead Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Error Alert Not Sent?": {
+      "main": [
+        [
+          {
+            "node": "Send Recovery API Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "id": "SaOHnFtOLX9wH4Zr"
+}

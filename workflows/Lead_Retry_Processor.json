@@ -1,0 +1,356 @@
+{
+  "name": "Lead Retry Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -688,
+        16
+      ],
+      "id": "4a8ca22b-72c2-462f-a991-7791a2b56a40",
+      "name": "Retry Scheduler"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    lead_id,\n    client_name,\n    company,\n    budget,\n    request,\n    status,\n    error_message,\n    execution_id,\n    retry_count,\n    next_retry_at,\n    sheets_saved,\n    telegram_sent\nFROM leads\nWHERE status = 'failed'\n  AND COALESCE(retry_count, 0) < 3\n  AND next_retry_at IS NOT NULL\n  AND next_retry_at <= NOW()\nORDER BY created_at ASC\nLIMIT 20;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -464,
+        16
+      ],
+      "id": "378479a2-5977-4279-9b54-4b37c106a370",
+      "name": "Find Failed Leads",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ff09ddcb-87cd-47ba-a2db-89989eb0f893",
+              "leftValue": "={{ /503|429|timeout|temporarily unavailable|^Execution failed\\. Recovery scheduled\\.$/i.test($json.error_message ?? '') }}",
+              "rightValue": "503",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -240,
+        16
+      ],
+      "id": "a1e00c17-7e96-469c-9d58-4cef7c35d2ff",
+      "name": "Is Retry Allowed?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        32,
+        0
+      ],
+      "id": "bc1ec77e-0333-4ff2-9a0b-9964cb046fbf",
+      "name": "Process Retry Queue"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "yFGvPfTim2g9AzEk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/yFGvPfTim2g9AzEk",
+          "cachedResultName": "AI Lead Qualification"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "parent_execution_id": "={{ String($execution.id) }}",
+            "is_retry": true
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "parent_execution_id",
+              "displayName": "parent_execution_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "is_retry",
+              "displayName": "is_retry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        320,
+        16
+      ],
+      "id": "ed50faaa-0e67-4463-a87f-8c52e1a18a74",
+      "name": "Retry Lead Processing",
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n    status = 'failed',\n    error_message = COALESCE($2::text, 'Retry execution failed'),\n    next_retry_at = CASE\n        WHEN COALESCE(retry_count, 0) < 3\n         AND (\n             $2 ILIKE '%503%'\n             OR $2 ILIKE '%429%'\n             OR $2 ILIKE '%timeout%'\n             OR $2 ILIKE '%temporarily unavailable%'\n         )\n        THEN NOW() + INTERVAL '10 minutes'\n        ELSE NULL\n    END\nWHERE lead_id = $1\n  AND status = 'processing'\n  AND parent_execution_id = $3\nRETURNING\n    lead_id,\n    status,\n    retry_count,\n    next_retry_at,\n    error_message;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Process Retry Queue').item.json.lead_id,\n  typeof $json.error === 'string'\n    ? $json.error\n    : ($json.error?.message ?? $json.message ?? 'Retry execution failed'),\n  String($execution.id)\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        544,
+        240
+      ],
+      "id": "384d53af-a9e8-43cc-8fe9-f7c8df3b549a",
+      "name": "Schedule Retry After Failure",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ee9d07eb-3706-4e50-bbeb-9e63e91ea276",
+              "leftValue": "={{ $json.result === 'not_claimed' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        0
+      ],
+      "id": "5bbc15ec-3857-45c8-861c-6dfd42d9c500",
+      "name": "Retry Skipped?"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=   {{ `⚠️ RETRY SKIPPED\n\n   Lead ID: ${$json.lead_id}\n   Reason: lead was taken over by another process before retry started.\n   Retry execution: ${$execution.id}\n\n   No action needed unless it repeats.` }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        832,
+        -16
+      ],
+      "id": "06e5f371-b841-4acb-a850-58e79b05643b",
+      "name": "Send Retry Skipped Alert",
+      "webhookId": "fc78b78a-b0ce-460c-a76f-7ed4711fe19d",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Retry Scheduler": {
+      "main": [
+        [
+          {
+            "node": "Find Failed Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Failed Leads": {
+      "main": [
+        [
+          {
+            "node": "Is Retry Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Retry Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Process Retry Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Retry Queue": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Retry Lead Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Lead Processing": {
+      "main": [
+        [
+          {
+            "node": "Retry Skipped?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule Retry After Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Retry After Failure": {
+      "main": [
+        [
+          {
+            "node": "Process Retry Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Skipped?": {
+      "main": [
+        [
+          {
+            "node": "Send Retry Skipped Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Retry Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Retry Skipped Alert": {
+      "main": [
+        [
+          {
+            "node": "Process Retry Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "PXn4wbenXzWDkWMv",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "id": "7gY9G6JC8RzG8YZa"
+}

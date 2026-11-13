@@ -1,0 +1,1745 @@
+{
+  "name": "AI Lead Qualification",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the client's request and identify what they want to build.\n\nClient name: {{ $json.client_name }}\n\nCompany: {{ $json.company }}\n\nRequest: {{ $json.request }}\n\nDo not evaluate the client's budget.\nDo not determine qualification or priority based on budget.\n\nrequest_type must be a short label of 2-4 words (for example: \"AI chatbot\", \"CRM integration\", \"Telegram bot\"), not a sentence.\n\nReturn the result using the required structured output format.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        864,
+        176
+      ],
+      "id": "a188c2ca-82c9-46b2-8334-24df09bce8f8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        400
+      ],
+      "id": "5bc6851f-b7c2-4d04-978e-f9f43fcd40e2",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_ME",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"request_type\": \"AI chatbot\",\n  \"reason\": \"The client wants a chatbot that can answer customer questions and qualify leads.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        400
+      ],
+      "id": "73466cfc-af02-4c6a-86cc-25c2b0cd9af1",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "899421a6-55e3-4c1a-ba33-49fe88919c64",
+              "name": "qualification",
+              "value": "Qualified",
+              "type": "string"
+            },
+            {
+              "id": "771c501d-4584-478a-9e3a-5c2ab905dc2f",
+              "name": "priority",
+              "value": "Medium",
+              "type": "string"
+            },
+            {
+              "id": "efa4bb25-2ffe-4351-b7c4-83a22c5caf05",
+              "name": "client_name",
+              "value": "={{ $('Retry Input Data').isExecuted ? $('Retry Input Data').first().json.name : $('Input data').first().json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "7d65b60e-378e-4559-8ff9-783728ee8545",
+              "name": "budget",
+              "value": "={{ $('Retry Input Data').isExecuted ? $('Retry Input Data').first().json.budget : $('Convert Budget').first().json.budget }}",
+              "type": "number"
+            },
+            {
+              "id": "30178da3-5ee8-4f06-81e0-4f99001e8701",
+              "name": "request_type",
+              "value": "={{ $('AI Agent').first().json.output.request_type }}",
+              "type": "string"
+            },
+            {
+              "id": "7123fe29-1896-4964-a8be-807d74ff75f9",
+              "name": "reason",
+              "value": "={{ $('AI Agent').first().json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "830a410c-6316-4586-a086-22de7cfa6cc9",
+              "name": "manager_message",
+              "value": "={{\n  \"New lead: \" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.name\n    : $('Input data').first().json.name) +\n\n  \"\\nQualification: Qualified\" +\n  \"\\nPriority: Medium\" +\n\n  \"\\nBudget: $\" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.budget\n    : $('Convert Budget').first().json.budget) +\n\n  \"\\nRequest: \" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.request\n    : $('Input data').first().json.request) +\n\n  \"\\nReason: \" +\n  $('AI Agent').first().json.output.reason\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1360,
+        176
+      ],
+      "id": "00212cc1-eb95-44d6-8712-30fa6e0743b5",
+      "name": "Medium Lead"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "899421a6-55e3-4c1a-ba33-49fe88919c64",
+              "name": "qualification",
+              "value": "Qualified",
+              "type": "string"
+            },
+            {
+              "id": "771c501d-4584-478a-9e3a-5c2ab905dc2f",
+              "name": "priority",
+              "value": "High",
+              "type": "string"
+            },
+            {
+              "id": "efa4bb25-2ffe-4351-b7c4-83a22c5caf05",
+              "name": "client_name",
+              "value": "={{ $('Retry Input Data').isExecuted ? $('Retry Input Data').first().json.name : $('Input data').first().json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "7d65b60e-378e-4559-8ff9-783728ee8545",
+              "name": "budget",
+              "value": "={{ $('Retry Input Data').isExecuted ? $('Retry Input Data').first().json.budget : $('Convert Budget').first().json.budget }}",
+              "type": "number"
+            },
+            {
+              "id": "30178da3-5ee8-4f06-81e0-4f99001e8701",
+              "name": "request_type",
+              "value": "={{ $('AI Agent').first().json.output.request_type }}",
+              "type": "string"
+            },
+            {
+              "id": "7123fe29-1896-4964-a8be-807d74ff75f9",
+              "name": "reason",
+              "value": "={{ $('AI Agent').first().json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "830a410c-6316-4586-a086-22de7cfa6cc9",
+              "name": "manager_message",
+              "value": "={{\n  \"New lead: \" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.name\n    : $('Input data').first().json.name) +\n\n  \"\\nQualification: Qualified\" +\n  \"\\nPriority: High\" +\n\n  \"\\nBudget: $\" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.budget\n    : $('Convert Budget').first().json.budget) +\n\n  \"\\nRequest: \" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.request\n    : $('Input data').first().json.request) +\n\n  \"\\nReason: \" +\n  $('AI Agent').first().json.output.reason\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1360,
+        352
+      ],
+      "id": "104c28d9-298f-4c6d-857d-f9a55ab55b26",
+      "name": "High Lead"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "899421a6-55e3-4c1a-ba33-49fe88919c64",
+              "name": "qualification",
+              "value": "Not Qualified",
+              "type": "string"
+            },
+            {
+              "id": "771c501d-4584-478a-9e3a-5c2ab905dc2f",
+              "name": "priority",
+              "value": "Low",
+              "type": "string"
+            },
+            {
+              "id": "efa4bb25-2ffe-4351-b7c4-83a22c5caf05",
+              "name": "client_name",
+              "value": "={{ $('Retry Input Data').isExecuted ? $('Retry Input Data').first().json.name : $('Input data').first().json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "7d65b60e-378e-4559-8ff9-783728ee8545",
+              "name": "budget",
+              "value": "={{ $('Retry Input Data').isExecuted ? $('Retry Input Data').first().json.budget : $('Convert Budget').first().json.budget }}",
+              "type": "number"
+            },
+            {
+              "id": "30178da3-5ee8-4f06-81e0-4f99001e8701",
+              "name": "request_type",
+              "value": "={{ $('AI Agent').first().json.output.request_type }}",
+              "type": "string"
+            },
+            {
+              "id": "7123fe29-1896-4964-a8be-807d74ff75f9",
+              "name": "reason",
+              "value": "={{ $('AI Agent').first().json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "830a410c-6316-4586-a086-22de7cfa6cc9",
+              "name": "manager_message",
+              "value": "={{\n  \"New lead: \" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.name\n    : $('Input data').first().json.name) +\n\n  \"\\nQualification: Not Qualified\" +\n  \"\\nPriority: Low\" +\n\n  \"\\nBudget: $\" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.budget\n    : $('Convert Budget').first().json.budget) +\n\n  \"\\nRequest: \" +\n  ($('Retry Input Data').isExecuted\n    ? $('Retry Input Data').first().json.request\n    : $('Input data').first().json.request) +\n\n  \"\\nReason: \" +\n  $('AI Agent').first().json.output.reason\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1360,
+        32
+      ],
+      "id": "4b7be9de-d41d-4825-814c-0185fe717ac4",
+      "name": "Low lead"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-lead",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        208
+      ],
+      "id": "0f433a70-ced0-4300-b0e2-933f2c88346c",
+      "name": "Webhook",
+      "webhookId": "fd4d0687-2b85-59c1-a13f-8e736b434c6c",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Webhook Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cda4ecda-91d9-4018-bd7c-1a5165c9c942",
+              "name": "lead_id",
+              "value": "={{ $json.body.lead_id }}",
+              "type": "string"
+            },
+            {
+              "id": "c52078ac-1967-419d-9982-59984787b61e",
+              "name": "name",
+              "value": "={{ $json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "f1f9d5a8-7bc6-482f-a358-62a17a9fb776",
+              "name": "company",
+              "value": "={{ $json.body.company }}",
+              "type": "string"
+            },
+            {
+              "id": "e71bdbdc-87cc-44e1-aace-c86221b63374",
+              "name": "budget",
+              "value": "={{ String($json.body.budget ?? '') }}",
+              "type": "string"
+            },
+            {
+              "id": "f2b384ae-e5af-47cd-9a0f-c642b226c7cc",
+              "name": "request",
+              "value": "={{ $json.body.request }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -608,
+        208
+      ],
+      "id": "77812a30-bb31-4de6-b21d-926e279c765f",
+      "name": "Input data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8649f89-7aaa-42c1-a0dc-f0d35aa75c47",
+              "name": "budget",
+              "value": "={{ Number($json.budget) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -192,
+        192
+      ],
+      "id": "0d2dc465-f772-45d3-a3c0-29b6339fa5c8",
+      "name": "Convert Budget"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "099a02ba-e9dd-466e-9477-b237e4c85a30",
+              "leftValue": "={{ $json.budget.trim() !== '' && Number.isFinite(Number($json.budget)) && Number($json.budget) >= 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "8d7e2945-c5e6-4fc6-a0e5-4f5aabd0242b",
+              "leftValue": "={{ typeof $json.name === 'string' && $json.name.trim().length > 0}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3b9de1e4-b0ba-446d-9e03-cb5e69aaa3c1",
+              "leftValue": "={{ typeof $json.company === 'string' && $json.company.trim().length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "77ccd79a-04bd-4bca-8500-4d1528cac333",
+              "leftValue": "={{ typeof $json.request === 'string' && $json.request.trim().length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "2c4c0f5f-a1b3-4aee-917a-37390d5a036b",
+              "leftValue": "={{ typeof $json.lead_id === 'string' && $json.lead_id.trim().length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        208
+      ],
+      "id": "51f1a8d5-4082-4882-8709-db15d33a2052",
+      "name": "Budget review"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4e58a44d-1d8b-49d7-a96c-1ce60c6846e0",
+              "name": "manager_message",
+              "value": "=\n{{ (() => {\n  const name = String($json.name ?? '').trim();\n  const company = String($json.company ?? '').trim();\n  const budget = String($json.budget ?? '').trim();\n  const request = String($json.request ?? '').trim();\n\n  let reason = 'Invalid lead data';\n\n  if (budget === '' || !Number.isFinite(Number(budget)) || Number(budget) < 0) {\n    reason = 'Invalid budget value';\n  } else if (name === '') {\n    reason = 'Client name is missing';\n  } else if (company === '') {\n    reason = 'Company name is missing';\n  } else if (request === '') {\n    reason = 'Request description is missing';\n  }\n\n  return [\n    '⚠️ Invalid lead received',\n    'Client: ' + (name || 'Not provided'),\n    'Company: ' + (company || 'Not provided'),\n    'Budget: ' + (budget || 'Not provided'),\n    'Reason: ' + reason\n  ].join('\\n');\n})() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -160,
+        384
+      ],
+      "id": "b67c3f44-51f2-4d07-83d8-bceff5570f9f",
+      "name": "Invalid Lead"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fff4c6c8-be13-43db-9347-84e7ebd3fe49",
+                    "leftValue": "={{ (() => {\n  const budget = Number(\n    $('Retry Input Data').isExecuted\n      ? $('Retry Input Data').first().json.budget\n      : $('Convert Budget').first().json.budget\n  );\n\n  return budget < 1000 ? 'low' : budget <= 3000 ? 'medium' : 'high';\n})() }}",
+                    "rightValue": "low",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Low"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "843cb619-c947-4a2e-8141-2c073d0f03fb",
+                    "leftValue": "={{ (() => {\n  const budget = Number(\n    $('Retry Input Data').isExecuted\n      ? $('Retry Input Data').first().json.budget\n      : $('Convert Budget').first().json.budget\n  );\n\n  return budget < 1000 ? 'low' : budget <= 3000 ? 'medium' : 'high';\n})() }}",
+                    "rightValue": "medium",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Medium"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2da698a9-37d8-4ce3-9305-dba6942f0ee0",
+                    "leftValue": "={{ (() => {\n  const budget = Number(\n    $('Retry Input Data').isExecuted\n      ? $('Retry Input Data').first().json.budget\n      : $('Convert Budget').first().json.budget\n  );\n\n  return budget < 1000 ? 'low' : budget <= 3000 ? 'medium' : 'high';\n})() }}",
+                    "rightValue": "high",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "High"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        160
+      ],
+      "id": "3001d564-4dfe-43ba-8f9e-9b54da5a946c",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n    status = 'completed',\n    processed_at = NOW(),\n    error_message = NULL,\n    next_retry_at = NULL\nWHERE lead_id = $1\n  AND status = 'processing'\n  AND sheets_saved = TRUE\n  AND telegram_sent = TRUE\n  AND execution_id = $2\nRETURNING\n    lead_id,\n    status,\n    sheets_saved,\n    telegram_sent,\n    processed_at;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Unified Lead Data').first().json.lead_id,\n  String($execution.id)\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2512,
+        368
+      ],
+      "id": "2e241590-07bc-4a3f-83f7-3c0ea563a365",
+      "name": "Mark Lead Completed",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "52cb6e06-2188-4862-bae9-3bd8abb104df",
+              "leftValue": "={{\n  $json.lead_id != null &&\n  $json.sheets_saved === true &&\n  $json.telegram_sent === true\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2304,
+        464
+      ],
+      "id": "0ae8eb69-1027-4631-b096-ae67095ac287",
+      "name": "Valid Lead Completed?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0f1fcc05-087e-498e-95e0-11c9157cf7a7",
+              "leftValue": "={{ $json.is_new }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        272,
+        192
+      ],
+      "id": "75cdd9af-e9a2-48ee-90e3-72f69174127f",
+      "name": "Is New Lead?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET sheets_saved = TRUE\nWHERE lead_id = $1\n  AND status = 'processing'\nRETURNING lead_id, sheets_saved, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Unified Lead Data').first().json.lead_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2528,
+        192
+      ],
+      "id": "e2eadce8-f3b4-46ba-83ed-c73bfe075207",
+      "name": "Mark Sheets Saved",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Лист1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $('Unified Lead Data').first().json.lead_id }}",
+            "date": "={{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "client_name": "={{ $('Unified Lead Data').first().json.client_name }}",
+            "company": "={{ $('Unified Lead Data').first().json.company }}",
+            "budget": "={{ $('Unified Lead Data').first().json.budget }}",
+            "request": "={{ $('Unified Lead Data').first().json.request }}",
+            "request_type": "={{ $('Unified Lead Data').first().json.request_type }}",
+            "qualification": "={{ $('Unified Lead Data').first().json.qualification }}",
+            "priority": "={{ $('Unified Lead Data').first().json.priority }}",
+            "reason": "={{ $('Unified Lead Data').first().json.reason }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "request_type",
+              "displayName": "request_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "qualification",
+              "displayName": "qualification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2304,
+        192
+      ],
+      "id": "97c1e81d-545e-4e9a-be89-cd10c841980b",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_ME",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    lead_id,\n    sheets_saved,\n    telegram_sent\nFROM leads\nWHERE lead_id = $1;",
+        "options": {
+          "queryReplacement": "={{ [ $('Unified Lead Data').first().json.lead_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1824,
+        176
+      ],
+      "id": "8faf2d10-b971-4b56-89d1-dba9bd307d86",
+      "name": "Check Sheets Saved",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4bf7e329-e1d9-4824-96da-eef8dcd0f7a2",
+              "leftValue": "={{ $json.sheets_saved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2032,
+        176
+      ],
+      "id": "96deb347-3560-4153-b577-3194398b8db3",
+      "name": "Sheets Already Saved?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    lead_id,\n    sheets_saved,\n    telegram_sent\nFROM leads\nWHERE lead_id = $1;",
+        "options": {
+          "queryReplacement": "={{ [ $('Unified Lead Data').first().json.lead_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1808,
+        384
+      ],
+      "id": "e1ea5fd3-fe85-4f8d-9496-80762989fb09",
+      "name": "Check Telegram Sent",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "012a69e0-cd28-4010-8e65-9966130357ef",
+              "leftValue": "={{ $json.telegram_sent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2032,
+        384
+      ],
+      "id": "9ebb6afa-e1be-48ff-86c4-6d8a0a1214c0",
+      "name": "Telegram Already Sent?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n    telegram_sent = TRUE,\n    telegram_message_id = $2\nWHERE lead_id = $1\n  AND status = 'processing'\nRETURNING\n    lead_id,\n    sheets_saved,\n    telegram_sent,\n    telegram_message_id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Unified Lead Data').first().json.lead_id,\n  $('Send Lead Notification').first().json.result.message_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2032,
+        560
+      ],
+      "id": "45d9ff2f-dbb9-44b2-b8a8-f496ed3b7fac",
+      "name": "Mark Telegram Sent",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "lead_id"
+            },
+            {
+              "name": "parent_execution_id"
+            },
+            {
+              "name": "is_retry",
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        16
+      ],
+      "id": "4dd0916d-a851-41c9-98cc-5678cdca0cbe",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "085b69ad-030d-40a1-b1d2-8f44596726db",
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0023ac1c-f9ef-4f38-af12-a509a39a8afb",
+              "name": "name",
+              "value": "={{ $json.client_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d081081a-72f1-4279-a9b4-50afb7d280d0",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "1fa42226-c057-49d3-89be-a6a707727d73",
+              "name": "budget",
+              "value": "={{ Number($json.budget) }}",
+              "type": "number"
+            },
+            {
+              "id": "b5edc4d5-b1e2-4fbd-aa79-b6bf7114c2b2",
+              "name": "request",
+              "value": "={{ $json[\"request\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        16,
+        -112
+      ],
+      "id": "43adbb2e-35ef-4158-b635-4e668a8a03ec",
+      "name": "Retry Input Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ea47b520-81de-4ea6-86be-cdeaa2c154df",
+              "leftValue": "={{ $json.is_retry === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -608,
+        16
+      ],
+      "id": "71b86c3a-4764-4112-9903-e9b5614d964b",
+      "name": "Is Retry?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6e6bce10-f7cc-48ce-ad96-6309c43cc1db",
+              "name": "lead_id",
+              "value": "={{ $json.lead_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9dd854b1-a951-4b99-adda-5be3ad22ab31",
+              "name": "client_name",
+              "value": "={{ $json.client_name }}",
+              "type": "string"
+            },
+            {
+              "id": "246951ce-2d03-4968-a31e-db870835e7a5",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "c3a88172-2e74-4d07-87ee-7f342dd210ce",
+              "name": "budget",
+              "value": "={{ Number($json.budget) }}",
+              "type": "number"
+            },
+            {
+              "id": "39b392b3-60a2-426d-8d00-58d9a9330081",
+              "name": "request",
+              "value": "={{ $json.request }}",
+              "type": "string"
+            },
+            {
+              "id": "b5dcf18d-4fcd-46d5-8356-759bd980d41f",
+              "name": "is_retry",
+              "value": "={{ $('When Executed by Another Workflow').isExecuted ? $('When Executed by Another Workflow').first().json.is_retry === true : false }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        704,
+        176
+      ],
+      "id": "d7c8f2c7-9b20-4e94-a55c-76c12bedfc23",
+      "name": "Prepare Lead Context"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    lead_id,\n    client_name,\n    company,\n    budget,\n    request,\n    sheets_saved,\n    telegram_sent\nFROM leads\nWHERE lead_id = $1;\n",
+        "options": {
+          "queryReplacement": "={{ [ $json.lead_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        496,
+        176
+      ],
+      "id": "79cfe25b-8d3f-4f83-9a01-d61fcad92467",
+      "name": "Get Lead From DB",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a8ab43d2-a37d-426d-982f-e7e1cbb44bb6",
+              "name": "lead_id",
+              "value": "={{ $('Prepare Lead Context').first().json.lead_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0a1d4d6a-94b7-4df6-bd2e-6b74e51e9a3f",
+              "name": "client_name",
+              "value": "={{ $('Prepare Lead Context').first().json.client_name }}",
+              "type": "string"
+            },
+            {
+              "id": "77b2a329-9df1-4650-9675-64f7a7595175",
+              "name": "company",
+              "value": "={{ $('Prepare Lead Context').first().json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "8ceb2851-b80d-44b2-8c58-47a1f019fe98",
+              "name": "budget",
+              "value": "={{ $('Prepare Lead Context').first().json.budget }}",
+              "type": "number"
+            },
+            {
+              "id": "a74d12cf-6d5a-4ad6-a5fe-59e7ca5ce20d",
+              "name": "request",
+              "value": "={{ $('Prepare Lead Context').first().json.request }}",
+              "type": "string"
+            },
+            {
+              "id": "9e00e4d7-37ac-458b-a227-01f483f4a157",
+              "name": "request_type",
+              "value": "={{ $('AI Agent').first().json.output.request_type }}",
+              "type": "string"
+            },
+            {
+              "id": "77657631-2838-49ad-b0e8-a204b6a14269",
+              "name": "reason",
+              "value": "={{ $('AI Agent').first().json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "064bd08d-933e-42d7-bbe6-21fe4f964f04",
+              "name": "qualification",
+              "value": "={{ $json.qualification }}",
+              "type": "string"
+            },
+            {
+              "id": "21aada82-1978-4740-9ebe-fd9b2e1604af",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "e6deb3ad-c91f-4993-a640-d4be5e91458d",
+              "name": "manager_message",
+              "value": "={{ $json.manager_message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1648,
+        176
+      ],
+      "id": "66b0ce52-2485-4aa7-bc70-6be6ad0fc88a",
+      "name": "Unified Lead Data"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $('Invalid Lead').first().json.manager_message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        384
+      ],
+      "id": "997ff86e-15a5-4279-87fd-0b103fbf71a9",
+      "name": "Send Invalid Lead Alert",
+      "webhookId": "73952003-de14-54ba-8c46-cdd595be4971",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $('Unified Lead Data').first().json.manager_message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1808,
+        560
+      ],
+      "id": "9d5d5c54-0980-4488-8078-2816b34bcada",
+      "name": "Send Lead Notification",
+      "webhookId": "f23c4540-b1a1-5a1e-96d5-34a2210b0f62",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "\nWITH inserted AS (\n    INSERT INTO leads (\n        lead_id,\n        client_name,\n        company,\n        budget,\n        request,\n        status,\n        execution_id,\n        processing_started_at\n    )\n    VALUES (\n        $1,\n        $2,\n        $3,\n        $4,\n        $5,\n        'processing',\n        $6,\n        NOW()\n    )\n    ON CONFLICT (lead_id) DO NOTHING\n    RETURNING lead_id\n)\nSELECT\n    EXISTS(SELECT 1 FROM inserted) AS is_new,\n    $1::text AS lead_id;\n",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Input data').first().json.lead_id,\n  $('Input data').first().json.name,\n  $('Input data').first().json.company,\n  $('Convert Budget').first().json.budget,\n  $('Input data').first().json.request,\n  $execution.id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        16,
+        192
+      ],
+      "id": "702a3ad9-df48-46c9-a0d8-5c46e7943981",
+      "name": "Insert Lead & Prevent Duplicates",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n    status = 'processing',\n    execution_id = $2,\n    parent_execution_id = $3,\n    processing_started_at = NOW(),\n    next_retry_at = NULL,\n    error_message = NULL,\n    retry_count = COALESCE(retry_count, 0) + 1\nWHERE lead_id = $1\n  AND status = 'failed'\n  AND COALESCE(retry_count, 0) < 3\n  AND next_retry_at IS NOT NULL\n  AND next_retry_at <= NOW()\nRETURNING\n    lead_id,\n    client_name,\n    company,\n    budget,\n    request,\n    retry_count,\n    sheets_saved,\n    telegram_sent;",
+        "options": {
+          "queryReplacement": "={{ \n[ $json.lead_id, String($execution.id), String($json.parent_execution_id) ] \n}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "f3c9c1e3-e1d6-46de-9ec7-8b11f21b5686",
+      "name": "Claim Lead for Retry",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "88225ca7-545c-4ec6-973b-8afdcfd9172a",
+              "leftValue": "={{ $json.lead_id != null }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "854ff4d9-8609-4642-8ff6-3723769c37da",
+      "name": "Lead Claimed?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1cad8153-5a6e-477e-91cc-3668ecc22a6a",
+              "name": "lead_id",
+              "value": "={{ $('When Executed by Another Workflow').first().json.lead_id }}",
+              "type": "string"
+            },
+            {
+              "id": "043de70c-e22e-46e3-81c3-9962b6184041",
+              "name": "result",
+              "value": "not_claimed",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        16,
+        48
+      ],
+      "id": "d0e220d6-6f67-4f66-94bd-ef7f0c923000",
+      "name": "Retry Not Claimed"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2512,
+        544
+      ],
+      "id": "0d21493a-5768-4030-b2d7-17046aaf1d0f",
+      "name": "Lead no longer owned by this execution"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Input data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "High Lead": {
+      "main": [
+        [
+          {
+            "node": "Unified Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Medium Lead": {
+      "main": [
+        [
+          {
+            "node": "Unified Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Low lead": {
+      "main": [
+        [
+          {
+            "node": "Unified Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input data": {
+      "main": [
+        [
+          {
+            "node": "Budget review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Budget": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead & Prevent Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget review": {
+      "main": [
+        [
+          {
+            "node": "Convert Budget",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invalid Lead": {
+      "main": [
+        [
+          {
+            "node": "Send Invalid Lead Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Low lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Medium Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "High Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Lead Completed?": {
+      "main": [
+        [
+          {
+            "node": "Mark Lead Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lead no longer owned by this execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New Lead?": {
+      "main": [
+        [
+          {
+            "node": "Get Lead From DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Sheets Saved": {
+      "main": [
+        [
+          {
+            "node": "Check Telegram Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Mark Sheets Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Sheets Saved": {
+      "main": [
+        [
+          {
+            "node": "Sheets Already Saved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets Already Saved?": {
+      "main": [
+        [
+          {
+            "node": "Check Telegram Sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Telegram Sent": {
+      "main": [
+        [
+          {
+            "node": "Telegram Already Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Already Sent?": {
+      "main": [
+        [
+          {
+            "node": "Valid Lead Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Lead Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Telegram Sent": {
+      "main": [
+        [
+          {
+            "node": "Valid Lead Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Is Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Input Data": {
+      "main": [
+        [
+          {
+            "node": "Get Lead From DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Retry?": {
+      "main": [
+        [
+          {
+            "node": "Claim Lead for Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Lead Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead From DB": {
+      "main": [
+        [
+          {
+            "node": "Prepare Lead Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unified Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Check Sheets Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Lead Notification": {
+      "main": [
+        [
+          {
+            "node": "Mark Telegram Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead & Prevent Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Is New Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Lead for Retry": {
+      "main": [
+        [
+          {
+            "node": "Lead Claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Claimed?": {
+      "main": [
+        [
+          {
+            "node": "Retry Input Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry Not Claimed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "PXn4wbenXzWDkWMv",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "id": "yFGvPfTim2g9AzEk"
+}

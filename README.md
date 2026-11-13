@@ -108,7 +108,7 @@ n8n (self-hosted, Docker) · PostgreSQL 17 · Google Gemini (via n8n AI Agent + 
 ## Setup (for reuse)
 
 1. Create the `leads` table (schema in `schema.sql`).
-2. Import the four workflows from `portfolio/*.json`.
+2. Import the four workflows from `workflows/*.json`.
 3. Create credentials: Postgres, Telegram Bot, Google Sheets OAuth2, Google Gemini API, Header Auth (webhook key), n8n API.
 4. Replace placeholders: `YOUR_TELEGRAM_CHAT_ID`, `YOUR_GOOGLE_SHEET_ID`, `YOUR_N8N_HOST`.
 5. In **Lead Retry Processor** → `Retry Lead Processing`, select your imported AI Lead Qualification workflow. In **Stuck Leads Monitor** → `Recovery Decision`, set `MAIN_WORKFLOW_ID` to its ID.

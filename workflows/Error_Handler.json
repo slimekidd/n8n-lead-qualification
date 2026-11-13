@@ -1,0 +1,88 @@
+{
+  "name": "Lead Processing - Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        128
+      ],
+      "id": "263e7e03-3c0e-4cfe-a11e-ffc73176d54d",
+      "name": "Catch Workflow Error"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET\n    status = 'failed',\n    error_message = COALESCE($2::text, 'Retry execution failed'),\n    next_retry_at = CASE\n        WHEN COALESCE(retry_count, 0) < 3\n         AND (\n             $2 ILIKE '%503%'\n             OR $2 ILIKE '%429%'\n             OR $2 ILIKE '%timeout%'\n             OR $2 ILIKE '%temporarily unavailable%'\n         )\n        THEN NOW() + INTERVAL '10 minutes'\n        ELSE NULL\n    END\nWHERE execution_id = $1\n  AND status = 'processing'\nRETURNING\n    lead_id,\n    status,\n    retry_count,\n    next_retry_at,\n    error_message;",
+        "options": {
+          "queryReplacement": "={{\n[\n  String($json.execution?.id ?? ''),\n  String($json.execution?.error?.message ?? 'Unknown error')\n]\n}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1d3e0596-24b2-43ba-82eb-4baff87ddf43",
+      "name": "Mark Lead Failed & Schedule Retry",
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres (leads DB)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ `🚨 AI Lead Qualification — ERROR\n\nWorkflow: ${$json.workflow?.name ?? 'Unknown'}\n\nExecution ID: ${$json.execution?.id ?? 'N/A'}\n\nFailed node: ${$json.execution?.lastNodeExecuted ?? 'Unknown'}\n\nError: ${$json.execution?.error?.message ?? $json.trigger?.error?.message ?? 'Unknown error'}\n\nExecution URL: ${$json.execution?.url ?? 'N/A'}` }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        272
+      ],
+      "id": "969f1de3-3c51-42cf-83ef-255f5f477eb9",
+      "name": "Send Error Alert",
+      "webhookId": "cd9f7008-97af-523e-94bc-2e1a524b2ded",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Catch Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Mark Lead Failed & Schedule Retry",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "id": "PXn4wbenXzWDkWMv"
+}
